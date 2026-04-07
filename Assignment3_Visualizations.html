@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assignment 3 — Office Supply Sales Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    :root {
+      --bg:      #1a254f;
+      --surface: #141726;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #f0c040;
+      --teal:    #38d9c0;
+      --rose:    #f06080;
+      --blue:    #5b7cf4;
+      --purple:  #a78bfa;
+      --text:    #e8eaf0;
+      --muted:   #7a8099;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;padding-bottom:60px;overflow-x:hidden;}
+
+    /* HERO */
+    .hero{
+      position:relative;padding:52px 48px 40px;
+      background:linear-gradient(135deg,#0d0f1a 0%,#141d3a 55%,#0d1628 100%);
+      border-bottom:1px solid var(--border);overflow:hidden;
+    }
+    .hero::before{content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse 80% 60% at 70% 40%,rgba(91,124,244,.14) 0%,transparent 70%),
+                 radial-gradient(ellipse 50% 50% at 20% 80%,rgba(240,96,128,.09) 0%,transparent 60%);
+      pointer-events:none;}
+    .hero-grid{position:absolute;inset:0;opacity:.04;
+      background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);
+      background-size:40px 40px;}
+    .hero-inner{position:relative;max-width:1340px;margin:0 auto;}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(240,192,64,.12);
+      border:1px solid rgba(240,192,64,.3);color:var(--gold);font-size:.7rem;font-weight:600;
+      letter-spacing:2px;text-transform:uppercase;padding:5px 14px;border-radius:20px;margin-bottom:16px;}
+    .eyebrow::before{content:'◆';font-size:.5rem;}
+    h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.9rem);font-weight:700;line-height:1.15;
+      background:linear-gradient(135deg,#fff 0%,var(--gold) 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
+    .sub{color:var(--muted);font-size:.88rem;font-weight:300;}
+    .sub strong{color:var(--teal);font-weight:500;}
+
+    /* KPI STRIP */
+    .kpi-strip{max-width:1340px;margin:0 auto;padding:28px 48px 0;
+      display:grid;grid-template-columns:repeat(5,1fr);gap:16px;}
+    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      padding:20px 18px 16px;position:relative;overflow:hidden;
+      transition:transform .2s,box-shadow .2s;}
+    .kpi:hover{transform:translateY(-3px);box-shadow:0 14px 36px rgba(0,0,0,.45);}
+    .kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+    .kpi:nth-child(1)::after{background:var(--gold);}
+    .kpi:nth-child(2)::after{background:var(--teal);}
+    .kpi:nth-child(3)::after{background:var(--rose);}
+    .kpi:nth-child(4)::after{background:var(--blue);}
+    .kpi:nth-child(5)::after{background:var(--purple);}
+    .kpi-icon{font-size:1.2rem;display:inline-flex;align-items:center;justify-content:center;
+      width:34px;height:34px;background:rgba(255,255,255,.06);border-radius:8px;margin-bottom:10px;}
+    .kpi-lbl{font-size:.68rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+    .kpi-val{font-family:'Playfair Display',serif;font-size:1.55rem;font-weight:700;color:var(--text);line-height:1;}
+    .kpi-sub{font-size:.7rem;color:var(--muted);margin-top:5px;}
+    .kpi-sub span{color:var(--teal);font-weight:500;}
+
+    /* SECTION HEADER */
+    .wrap{max-width:1340px;margin:0 auto;padding:34px 48px 0;}
+    .sh{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+    .snum{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+      font-size:.68rem;font-weight:700;letter-spacing:1px;flex-shrink:0;}
+    .snum.g{background:rgba(240,192,64,.18);color:var(--gold);border:1px solid rgba(240,192,64,.4);}
+    .snum.t{background:rgba(56,217,192,.14);color:var(--teal);border:1px solid rgba(56,217,192,.3);}
+    .snum.r{background:rgba(240,96,128,.14);color:var(--rose);border:1px solid rgba(240,96,128,.3);}
+    .snum.b{background:rgba(91,124,244,.18);color:var(--blue);border:1px solid rgba(91,124,244,.35);}
+    .snum.p{background:rgba(167,139,250,.14);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
+    .si h3{font-size:.88rem;font-weight:600;color:var(--text);}
+    .si p{font-size:.73rem;color:var(--muted);margin-top:2px;}
+    .si p em{color:var(--teal);font-style:normal;font-weight:500;}
+
+    /* CARDS */
+    .r2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .r1{display:grid;grid-template-columns:1fr;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;position:relative;overflow:hidden;}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.11),transparent);}
+
+    /* INLINE STATS */
+    .istats{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+    .is{display:flex;flex-direction:column;gap:2px;}
+    .isv{font-size:.92rem;font-weight:600;color:var(--text);}
+    .isl{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+
+    /* MULTIVIEW SECTION */
+    .mv-wrap{max-width:1340px;margin:36px auto 0;padding:0 48px;}
+    .mv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .mv-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;}
+    .mv-badge{background:linear-gradient(135deg,rgba(240,192,64,.18),rgba(240,192,64,.04));
+      border:1px solid rgba(240,192,64,.35);color:var(--gold);font-size:.68rem;font-weight:600;
+      letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border-radius:20px;}
+    .mv-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;overflow-x:auto;}
+    .mv-note{font-size:.72rem;color:var(--muted);margin-top:14px;text-align:center;letter-spacing:.3px;}
+    .mv-note em{color:var(--teal);font-style:normal;}
+
+    footer{text-align:center;margin-top:52px;color:var(--muted);font-size:.73rem;}
+    footer strong{color:var(--gold);}
+
+    .vega-embed{background:transparent !important;}
+    .vega-embed summary{display:none !important;}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .kpi{animation:fadeUp .5s ease both;}
+    .kpi:nth-child(1){animation-delay:.05s;}.kpi:nth-child(2){animation-delay:.12s;}
+    .kpi:nth-child(3){animation-delay:.18s;}.kpi:nth-child(4){animation-delay:.24s;}
+    .kpi:nth-child(5){animation-delay:.30s;}
+    .card,.mv-card{animation:fadeUp .6s ease both;animation-delay:.35s;}
+
+    @media(max-width:900px){
+      .hero,.kpi-strip,.wrap,.mv-wrap{padding-left:18px;padding-right:18px;}
+      .kpi-strip{grid-template-columns:repeat(2,1fr);}
+      .r2{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="eyebrow">Vega-Lite · Assignment 3</div>
+    <h1>Office Supply Sales Dashboard</h1>
+    <p class="sub">
+      Dataset: <strong>HW_III</strong> &nbsp;·&nbsp;
+      <strong>43 orders</strong> &nbsp;·&nbsp;
+      <strong>2021–2022</strong> &nbsp;·&nbsp;
+      5 Vega-Lite views · Multiview Concatenation
+    </p>
+  </div>
+</header>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="kpi-icon">💰</div>
+    <div class="kpi-lbl">Total Revenue</div>
+    <div class="kpi-val" id="k1">—</div>
+    <div class="kpi-sub">all 43 orders</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-icon">📦</div>
+    <div class="kpi-lbl">Total Units Sold</div>
+    <div class="kpi-val" id="k2">—</div>
+    <div class="kpi-sub">Avg <span id="k2s">—</span> per order</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-icon">🏆</div>
+    <div class="kpi-lbl">Top Sales Rep</div>
+    <div class="kpi-val" id="k3">—</div>
+    <div class="kpi-sub">highest revenue</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-icon">🛒</div>
+    <div class="kpi-lbl">Best-Selling Item</div>
+    <div class="kpi-val" id="k4">—</div>
+    <div class="kpi-sub">by total revenue</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-icon">🗺️</div>
+    <div class="kpi-lbl">Top Region</div>
+    <div class="kpi-val" id="k5">—</div>
+    <div class="kpi-sub">highest revenue</div>
+  </div>
+</div>
+
+<!-- CHARTS ROW 1: Donut + Streamgraph -->
+<div class="wrap">
+  <div class="r2">
+    <div>
+      <div class="sh"><div class="snum g">01</div><div class="si"><h3>Donut Chart — Revenue by Rep</h3><p>Hover a slice for exact values &nbsp;<em>· Tooltip</em></p></div></div>
+      <div class="card">
+        <div class="istats" id="s1"></div>
+        <div id="vis1"></div>
+      </div>
+    </div>
+    <div>
+      <div class="sh"><div class="snum t">02</div><div class="si"><h3>Streamgraph — Revenue Over Time by Item</h3><p>Hover streams to highlight &nbsp;<em>· Color by Item</em></p></div></div>
+      <div class="card">
+        <div class="istats" id="s2"></div>
+        <div id="vis2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHART 3: Trellis -->
+<div class="wrap">
+  <div class="sh"><div class="snum r">03</div><div class="si"><h3>Trellis Histogram — Units per Item + Mean Overlay</h3><p>Dashed rule = mean units per item &nbsp;<em>· Hover bars for counts</em></p></div></div>
+  <div class="card r1">
+    <div class="istats" id="s3"></div>
+    <div id="vis3"></div>
+  </div>
+</div>
+
+<!-- CHARTS ROW 2: Scatter + Stacked -->
+<div class="wrap">
+  <div class="r2">
+    <div>
+      <div class="sh"><div class="snum b">04</div><div class="si"><h3>Scatter + Linked Bar — Units vs Revenue</h3><p><em>Drag to brush-select</em> → bar updates live below</p></div></div>
+      <div class="card">
+        <div class="istats" id="s4"></div>
+        <div id="vis4"></div>
+      </div>
+    </div>
+    <div>
+      <div class="sh"><div class="snum p">05</div><div class="si"><h3>Stacked Bar — Revenue by Region &amp; Item</h3><p><em>Click legend</em> to isolate an item</p></div></div>
+      <div class="card">
+        <div class="istats" id="s5"></div>
+        <div id="vis5"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MULTIVIEW CONCATENATION -->
+<div class="mv-wrap">
+  <div class="mv-head">
+    <div class="mv-title">All 5 Views — Vega-Lite Multiview Concatenation</div>
+    <div class="mv-badge">vconcat + hconcat</div>
+  </div>
+  <div class="mv-card">
+    <div id="vis-mv"></div>
+  </div>
+  <div class="mv-note">
+    All 5 charts rendered inside a single Vega-Lite <em>vconcat</em> spec —
+    interactions (brush, hover, legend click) are independent per view.
+  </div>
+</div>
+
+<footer>
+  <p><strong>Assignment 3</strong> · Visualization · Vega-Lite · HW_III Office Supply Sales Dataset ·</p>
+</footer>
+
+<script>
+/* ─── DATA ─────────────────────────────────────────────────────── */
+const D=[
+  {"OrderDate":"2021-01-06","Region":"East","Rep":"Jones","Item":"Pencil","Units":95,"UC":1.99,"Total":189.05},
+  {"OrderDate":"2021-01-23","Region":"Central","Rep":"Kivell","Item":"Binder","Units":50,"UC":19.99,"Total":999.50},
+  {"OrderDate":"2021-02-09","Region":"Central","Rep":"Jardine","Item":"Pencil","Units":36,"UC":4.99,"Total":179.64},
+  {"OrderDate":"2021-02-26","Region":"Central","Rep":"Gill","Item":"Pen","Units":27,"UC":19.99,"Total":539.73},
+  {"OrderDate":"2021-03-15","Region":"West","Rep":"Sorvino","Item":"Pencil","Units":56,"UC":2.99,"Total":167.44},
+  {"OrderDate":"2021-04-01","Region":"East","Rep":"Jones","Item":"Binder","Units":60,"UC":4.99,"Total":299.40},
+  {"OrderDate":"2021-04-18","Region":"Central","Rep":"Andrews","Item":"Pencil","Units":75,"UC":1.99,"Total":149.25},
+  {"OrderDate":"2021-05-05","Region":"Central","Rep":"Jardine","Item":"Pencil","Units":90,"UC":4.99,"Total":449.10},
+  {"OrderDate":"2021-05-22","Region":"West","Rep":"Thompson","Item":"Pencil","Units":32,"UC":1.99,"Total":63.68},
+  {"OrderDate":"2021-06-08","Region":"East","Rep":"Jones","Item":"Binder","Units":60,"UC":8.99,"Total":539.40},
+  {"OrderDate":"2021-06-25","Region":"Central","Rep":"Morgan","Item":"Pencil","Units":90,"UC":4.99,"Total":449.10},
+  {"OrderDate":"2021-07-12","Region":"East","Rep":"Howard","Item":"Binder","Units":29,"UC":1.99,"Total":57.71},
+  {"OrderDate":"2021-07-29","Region":"East","Rep":"Parent","Item":"Binder","Units":81,"UC":19.99,"Total":1619.19},
+  {"OrderDate":"2021-08-15","Region":"East","Rep":"Jones","Item":"Pencil","Units":35,"UC":4.99,"Total":174.65},
+  {"OrderDate":"2021-09-01","Region":"Central","Rep":"Smith","Item":"Desk","Units":2,"UC":125.0,"Total":250.00},
+  {"OrderDate":"2021-09-18","Region":"East","Rep":"Jones","Item":"Pen Set","Units":16,"UC":15.99,"Total":255.84},
+  {"OrderDate":"2021-10-05","Region":"Central","Rep":"Morgan","Item":"Binder","Units":28,"UC":8.99,"Total":251.72},
+  {"OrderDate":"2021-10-22","Region":"East","Rep":"Jones","Item":"Pen","Units":64,"UC":8.99,"Total":575.36},
+  {"OrderDate":"2021-11-08","Region":"East","Rep":"Parent","Item":"Pen","Units":15,"UC":19.99,"Total":299.85},
+  {"OrderDate":"2021-11-25","Region":"Central","Rep":"Kivell","Item":"Pen Set","Units":96,"UC":4.99,"Total":479.04},
+  {"OrderDate":"2021-12-12","Region":"Central","Rep":"Smith","Item":"Pencil","Units":67,"UC":1.29,"Total":86.43},
+  {"OrderDate":"2021-12-29","Region":"East","Rep":"Parent","Item":"Pen Set","Units":74,"UC":15.99,"Total":1183.26},
+  {"OrderDate":"2022-01-15","Region":"Central","Rep":"Gill","Item":"Binder","Units":46,"UC":8.99,"Total":413.54},
+  {"OrderDate":"2022-02-01","Region":"Central","Rep":"Smith","Item":"Binder","Units":87,"UC":15.0,"Total":1305.00},
+  {"OrderDate":"2022-02-18","Region":"East","Rep":"Jones","Item":"Binder","Units":4,"UC":4.99,"Total":19.96},
+  {"OrderDate":"2022-03-07","Region":"West","Rep":"Sorvino","Item":"Binder","Units":7,"UC":19.99,"Total":139.93},
+  {"OrderDate":"2022-03-24","Region":"Central","Rep":"Jardine","Item":"Pen Set","Units":50,"UC":4.99,"Total":249.50},
+  {"OrderDate":"2022-04-10","Region":"Central","Rep":"Andrews","Item":"Pencil","Units":66,"UC":1.99,"Total":131.34},
+  {"OrderDate":"2022-04-27","Region":"East","Rep":"Howard","Item":"Pen","Units":96,"UC":4.99,"Total":479.04},
+  {"OrderDate":"2022-05-14","Region":"Central","Rep":"Gill","Item":"Pencil","Units":53,"UC":1.29,"Total":68.37},
+  {"OrderDate":"2022-05-31","Region":"Central","Rep":"Gill","Item":"Binder","Units":80,"UC":8.99,"Total":719.20},
+  {"OrderDate":"2022-06-17","Region":"Central","Rep":"Kivell","Item":"Desk","Units":5,"UC":125.0,"Total":625.00},
+  {"OrderDate":"2022-07-04","Region":"East","Rep":"Jones","Item":"Pen Set","Units":62,"UC":4.99,"Total":309.38},
+  {"OrderDate":"2022-07-21","Region":"Central","Rep":"Morgan","Item":"Pen Set","Units":55,"UC":12.49,"Total":686.95},
+  {"OrderDate":"2022-08-07","Region":"Central","Rep":"Kivell","Item":"Pen Set","Units":42,"UC":23.95,"Total":1005.90},
+  {"OrderDate":"2022-08-24","Region":"West","Rep":"Sorvino","Item":"Desk","Units":3,"UC":275.0,"Total":825.00},
+  {"OrderDate":"2022-09-10","Region":"Central","Rep":"Gill","Item":"Pencil","Units":7,"UC":1.29,"Total":9.03},
+  {"OrderDate":"2022-09-27","Region":"West","Rep":"Sorvino","Item":"Pen","Units":76,"UC":1.99,"Total":151.24},
+  {"OrderDate":"2022-10-14","Region":"West","Rep":"Thompson","Item":"Binder","Units":57,"UC":19.99,"Total":1139.43},
+  {"OrderDate":"2022-10-31","Region":"Central","Rep":"Andrews","Item":"Pencil","Units":14,"UC":1.29,"Total":18.06},
+  {"OrderDate":"2022-11-17","Region":"Central","Rep":"Jardine","Item":"Binder","Units":11,"UC":4.99,"Total":54.89},
+  {"OrderDate":"2022-12-04","Region":"Central","Rep":"Jardine","Item":"Binder","Units":94,"UC":19.99,"Total":1879.06},
+  {"OrderDate":"2022-12-21","Region":"Central","Rep":"Andrews","Item":"Binder","Units":28,"UC":4.99,"Total":139.72}
+];
+
+/* ─── HELPERS ──────────────────────────────────────────────────── */
+const fmt = n => '$'+n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+function agg(arr,key){const m={};arr.forEach(d=>{m[d[key]]=(m[d[key]]||0)+d.Total;});return m;}
+function topEntry(obj){return Object.entries(obj).sort((a,b)=>b[1]-a[1])[0];}
+function makeStats(id,items){
+  document.getElementById(id).innerHTML=items.map(([v,l])=>
+    `<div class="is"><div class="isv">${v}</div><div class="isl">${l}</div></div>`).join('');
+}
+
+const totalRev   = D.reduce((s,d)=>s+d.Total,0);
+const totalUnits = D.reduce((s,d)=>s+d.Units,0);
+const repMap     = agg(D,'Rep'), itemMap = agg(D,'Item'), regMap = agg(D,'Region');
+const topRep     = topEntry(repMap), topItem = topEntry(itemMap), topReg = topEntry(regMap);
+
+document.getElementById('k1').textContent = fmt(totalRev);
+document.getElementById('k2').textContent = totalUnits.toLocaleString();
+document.getElementById('k2s').textContent= (totalUnits/D.length).toFixed(1);
+document.getElementById('k3').textContent = topRep[0];
+document.getElementById('k4').textContent = topItem[0];
+document.getElementById('k5').textContent = topReg[0];
+
+makeStats('s1',[
+  [Object.keys(repMap).length,'Sales Reps'],
+  [fmt(topRep[1]),`Top: ${topRep[0]}`],
+  [fmt(Math.min(...Object.values(repMap))),'Lowest Rep'],
+  [fmt(totalRev/Object.keys(repMap).length),'Avg per Rep']
+]);
+const dates=D.map(d=>d.OrderDate).sort();
+makeStats('s2',[
+  [dates[0]+' → '+dates[dates.length-1],'Date Range'],
+  [Object.keys(itemMap).length,'Distinct Items'],
+  [topItem[0],'Top Revenue Item'],
+  [fmt(topItem[1]),'Item Total']
+]);
+const allU=D.map(d=>d.Units);
+makeStats('s3',[
+  [(totalUnits/D.length).toFixed(1),'Mean Units / Order'],
+  [Math.max(...allU),'Max Units'],
+  [Math.min(...allU),'Min Units'],
+  [D.length,'Total Orders']
+]);
+const maxOrd=D.reduce((a,b)=>b.Total>a.Total?b:a);
+makeStats('s4',[
+  [fmt(maxOrd.Total),`Max Order (${maxOrd.Rep})`],
+  [fmt(totalRev/D.length),'Avg Order Value'],
+  ['Drag to select','Brush Interaction'],
+  [D.length,'Data Points']
+]);
+makeStats('s5',[
+  [Object.keys(regMap).length,'Regions'],
+  [fmt(topReg[1]),`Top: ${topReg[0]}`],
+  ['Click legend','Filter Interaction'],
+  [Object.keys(itemMap).length,'Items']
+]);
+
+/* ─── VEGA SHARED ──────────────────────────────────────────────── */
+const BG='transparent';
+const CI=["#f0c040","#38d9c0","#f06080","#5b7cf4","#a78bfa"];
+const axCfg=(fs=9)=>({labelFontSize:fs,labelColor:'#7a8099',titleColor:'#7a8099',
+  gridColor:'rgba(255,255,255,0.045)',tickColor:'transparent',domainColor:'rgba(255,255,255,.07)'});
+const lgCfg={labelColor:'#bcc0d0',titleColor:'#bcc0d0',labelFontSize:10,titleFontSize:10};
+const EO={actions:false,renderer:'svg'};
+
+/* ─── CHART 1: DONUT ───────────────────────────────────────────── */
+const spec1={
+  $schema:'https://vega.github.io/schema/vega-lite/v5.json',background:BG,
+  width:290,height:250,data:{values:D},
+  transform:[{aggregate:[{op:'sum',field:'Total',as:'TR'}],groupby:['Rep']}],
+  mark:{type:'arc',innerRadius:70,outerRadius:115,stroke:'#141726',strokeWidth:2},
+  params:[{name:'h',select:{type:'point',on:'mouseover'}}],
+  encoding:{
+    theta:{field:'TR',type:'quantitative'},
+    color:{field:'Rep',type:'nominal',scale:{scheme:'tableau20'},legend:{...lgCfg,title:'Rep',orient:'right'}},
+    opacity:{condition:{param:'h',value:1},value:0.5},
+    tooltip:[{field:'Rep',title:'Sales Rep'},{field:'TR',type:'quantitative',title:'Revenue ($)',format:',.2f'}]
+  },config:{view:{stroke:null},background:BG}
+};
+
+/* ─── CHART 2: STREAMGRAPH ─────────────────────────────────────── */
+const spec2={
+  $schema:'https://vega.github.io/schema/vega-lite/v5.json',background:BG,
+  width:360,height:240,data:{values:D},
+  mark:{type:'area',interpolate:'monotone',opacity:0.9},
+  params:[{name:'hi',select:{type:'point',fields:['Item'],on:'mouseover'}}],
+  encoding:{
+    x:{field:'OrderDate',type:'temporal',timeUnit:'yearmonth',
+       axis:{...axCfg(9),title:'Month',format:'%b %y',labelAngle:-30}},
+    y:{field:'Total',type:'quantitative',aggregate:'sum',stack:'center',
+       axis:{...axCfg(9),title:'Revenue (centered)'}},
+    color:{field:'Item',type:'nominal',scale:{range:CI},legend:{...lgCfg,title:'Item',orient:'right'}},
+    opacity:{condition:{param:'hi',value:1},value:0.25},
+    tooltip:[{field:'Item'},{field:'OrderDate',type:'temporal',timeUnit:'yearmonth',format:'%b %Y',title:'Month'},
+             {field:'Total',aggregate:'sum',type:'quantitative',title:'Revenue ($)',format:',.2f'}]
+  },config:{view:{stroke:null},background:BG}
+};
+
+/* ─── CHART 3: TRELLIS HISTOGRAM ──────────────────────────────── */
+const spec3={
+  $schema:'https://vega.github.io/schema/vega-lite/v5.json',background:BG,
+  data:{values:D},
+  facet:{field:'Item',type:'nominal',columns:5,
+         header:{title:null,labelFontSize:11,labelFontWeight:'bold',labelColor:'#e8eaf0'}},
+  spec:{width:145,height:140,
+    layer:[
+      {mark:{type:'bar',opacity:.82,cornerRadiusTopLeft:2,cornerRadiusTopRight:2},
+       encoding:{
+         x:{field:'Units',type:'quantitative',bin:{maxbins:7},axis:{...axCfg(8),title:'Units'}},
+         y:{aggregate:'count',type:'quantitative',axis:{...axCfg(8),title:'Count'}},
+         color:{field:'Item',type:'nominal',scale:{range:CI},legend:null},
+         tooltip:[{field:'Units',bin:true,title:'Units (bin)'},{aggregate:'count',type:'quantitative',title:'Count'}]
+       }
+      },
+      {mark:{type:'rule',color:'#f06080',strokeWidth:2.5,strokeDash:[5,3]},
+       encoding:{
+         x:{field:'Units',aggregate:'mean',type:'quantitative'},
+         tooltip:[{field:'Units',aggregate:'mean',type:'quantitative',title:'Mean Units',format:'.1f'}]
+       }
+      }
+    ]
+  },
+  config:{view:{stroke:null},background:BG,facet:{spacing:14}}
+};
+
+/* ─── CHART 4: SCATTER + LINKED BAR ───────────────────────────── */
+const spec4={
+  $schema:'https://vega.github.io/schema/vega-lite/v5.json',background:BG,
+  data:{values:D},
+  vconcat:[
+    {width:340,height:195,
+     mark:{type:'point',filled:true,size:88,opacity:.87},
+     params:[{name:'br',select:{type:'interval',encodings:['x','y'],
+       mark:{fill:'#5b7cf4',fillOpacity:.1,stroke:'#5b7cf4',strokeWidth:1.5}}}],
+     encoding:{
+       x:{field:'Units',type:'quantitative',axis:{...axCfg(9),title:'Units Sold'}},
+       y:{field:'Total',type:'quantitative',axis:{...axCfg(9),title:'Revenue ($)'}},
+       color:{condition:{param:'br',field:'Item',type:'nominal',scale:{range:CI}},value:'#1e2136'},
+       shape:{field:'Item',type:'nominal'},
+       tooltip:[{field:'Rep'},{field:'Item'},{field:'Units'},{field:'Total',format:',.2f',title:'Revenue ($)'},{field:'Region'}]
+     }
+    },
+    {width:340,height:100,
+     transform:[{filter:{param:'br'}}],
+     mark:{type:'bar',cornerRadiusTopLeft:3,cornerRadiusTopRight:3,opacity:.88},
+     encoding:{
+       x:{field:'Item',type:'nominal',axis:{...axCfg(9),title:'Item'}},
+       y:{field:'Total',aggregate:'sum',type:'quantitative',axis:{...axCfg(9),title:'Sum Revenue ($)'}},
+       color:{field:'Item',type:'nominal',scale:{range:CI},legend:{...lgCfg,title:'Item',orient:'right'}},
+       tooltip:[{field:'Item'},{field:'Total',aggregate:'sum',title:'Selected Revenue ($)',format:',.2f'}]
+     }
+    }
+  ],
+  config:{view:{stroke:null},background:BG}
+};
+
+/* ─── CHART 5: STACKED BAR ─────────────────────────────────────── */
+const spec5={
+  $schema:'https://vega.github.io/schema/vega-lite/v5.json',background:BG,
+  width:330,height:300,data:{values:D},
+  params:[{name:'sel',select:{type:'point',fields:['Item']},bind:'legend'}],
+  mark:{type:'bar',cornerRadiusTopLeft:3,cornerRadiusTopRight:3},
+  encoding:{
+    x:{field:'Region',type:'nominal',axis:{...axCfg(10),title:'Region'}},
+    y:{field:'Total',aggregate:'sum',type:'quantitative',axis:{...axCfg(10),title:'Revenue ($)'}},
+    color:{field:'Item',type:'nominal',scale:{range:CI},
+           legend:{...lgCfg,title:'Item (click to filter)',orient:'bottom',columns:3}},
+    opacity:{condition:{param:'sel',value:1},value:0.1},
+    tooltip:[{field:'Region'},{field:'Item'},{field:'Total',aggregate:'sum',title:'Revenue ($)',format:',.2f'}]
+  },
+  config:{view:{stroke:null},background:BG}
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   MULTIVIEW — All 5 views in ONE Vega-Lite spec via vconcat/hconcat
+═══════════════════════════════════════════════════════════════════ */
+const specMV={
+  $schema:'https://vega.github.io/schema/vega-lite/v5.json',
+  background:BG,
+  title:{
+    text:'All 5 Views — Vega-Lite Multiview Concatenation',
+    subtitle:'Donut  ·  Streamgraph  ·  Trellis Histogram  ·  Scatter+LinkedBar  ·  Stacked Bar',
+    color:'#e8eaf0',subtitleColor:'#7a8099',
+    font:'Playfair Display',fontSize:14,fontWeight:'bold',
+    subtitleFontSize:10,subtitleFontWeight:'normal',
+    anchor:'start',offset:16
+  },
+  vconcat:[
+
+    /* ROW 1: hconcat[ donut, streamgraph ] */
+    {hconcat:[
+      /* Donut */
+      {
+        title:{text:'① Donut — Revenue by Rep',color:'#f0c040',fontSize:11,fontWeight:'bold',anchor:'start'},
+        width:220,height:200,data:{values:D},
+        transform:[{aggregate:[{op:'sum',field:'Total',as:'TR'}],groupby:['Rep']}],
+        mark:{type:'arc',innerRadius:58,outerRadius:98,stroke:'#141726',strokeWidth:2},
+        params:[{name:'hm',select:{type:'point',on:'mouseover'}}],
+        encoding:{
+          theta:{field:'TR',type:'quantitative'},
+          color:{field:'Rep',type:'nominal',scale:{scheme:'tableau20'},legend:{...lgCfg,title:'Rep',orient:'right'}},
+          opacity:{condition:{param:'hm',value:1},value:0.45},
+          tooltip:[{field:'Rep',title:'Sales Rep'},{field:'TR',type:'quantitative',title:'Revenue ($)',format:',.2f'}]
+        }
+      },
+      /* Streamgraph */
+      {
+        title:{text:'② Streamgraph — Total by Item over Time',color:'#38d9c0',fontSize:11,fontWeight:'bold',anchor:'start'},
+        width:460,height:200,data:{values:D},
+        mark:{type:'area',interpolate:'monotone'},
+        params:[{name:'him',select:{type:'point',fields:['Item'],on:'mouseover'}}],
+        encoding:{
+          x:{field:'OrderDate',type:'temporal',timeUnit:'yearmonth',
+             axis:{...axCfg(8),title:'Month',format:'%b %y',labelAngle:-30}},
+          y:{field:'Total',type:'quantitative',aggregate:'sum',stack:'center',
+             axis:{...axCfg(8),title:'Revenue (centered)'}},
+          color:{field:'Item',type:'nominal',scale:{range:CI},legend:{...lgCfg,title:'Item',orient:'right'}},
+          opacity:{condition:{param:'him',value:1},value:0.25},
+          tooltip:[{field:'Item'},{field:'OrderDate',type:'temporal',timeUnit:'yearmonth',format:'%b %Y',title:'Month'},
+                   {field:'Total',aggregate:'sum',type:'quantitative',title:'Revenue ($)',format:',.2f'}]
+        }
+      }
+    ]},
+
+    /* ROW 2: trellis histogram */
+    {
+      title:{text:'③ Trellis Histogram — Units Distribution per Item  (— mean)',
+             color:'#f06080',fontSize:11,fontWeight:'bold',anchor:'start'},
+      data:{values:D},
+      facet:{field:'Item',type:'nominal',columns:5,
+             header:{title:null,labelFontSize:10,labelFontWeight:'bold',labelColor:'#e8eaf0'}},
+      spec:{width:132,height:110,
+        layer:[
+          {mark:{type:'bar',opacity:.82,cornerRadiusTopLeft:2,cornerRadiusTopRight:2},
+           encoding:{
+             x:{field:'Units',type:'quantitative',bin:{maxbins:7},axis:{...axCfg(7),title:'Units'}},
+             y:{aggregate:'count',type:'quantitative',axis:{...axCfg(7),title:'Count'}},
+             color:{field:'Item',type:'nominal',scale:{range:CI},legend:null},
+             tooltip:[{field:'Units',bin:true,title:'Units (bin)'},{aggregate:'count',type:'quantitative',title:'Count'}]
+           }
+          },
+          {mark:{type:'rule',color:'#f06080',strokeWidth:2.2,strokeDash:[4,3]},
+           encoding:{
+             x:{field:'Units',aggregate:'mean',type:'quantitative'},
+             tooltip:[{field:'Units',aggregate:'mean',type:'quantitative',title:'Mean Units',format:'.1f'}]
+           }
+          }
+        ]
+      },
+      config:{facet:{spacing:10}}
+    },
+
+    /* ROW 3: hconcat[ scatter+bar, stacked ] */
+    {hconcat:[
+      /* Scatter + Linked bar (nested vconcat) */
+      {
+        title:{text:'④ Scatter: Units vs Revenue — drag brush → bar updates',
+               color:'#5b7cf4',fontSize:11,fontWeight:'bold',anchor:'start'},
+        data:{values:D},
+        vconcat:[
+          {width:395,height:165,
+           mark:{type:'point',filled:true,size:80,opacity:.87},
+           params:[{name:'brm',select:{type:'interval',encodings:['x','y'],
+             mark:{fill:'#5b7cf4',fillOpacity:.1,stroke:'#5b7cf4',strokeWidth:1.5}}}],
+           encoding:{
+             x:{field:'Units',type:'quantitative',axis:{...axCfg(8),title:'Units'}},
+             y:{field:'Total',type:'quantitative',axis:{...axCfg(8),title:'Revenue ($)'}},
+             color:{condition:{param:'brm',field:'Item',type:'nominal',scale:{range:CI}},value:'#1e2136'},
+             shape:{field:'Item',type:'nominal'},
+             tooltip:[{field:'Rep'},{field:'Item'},{field:'Units'},{field:'Total',format:',.2f'},{field:'Region'}]
+           }
+          },
+          {width:395,height:78,
+           transform:[{filter:{param:'brm'}}],
+           mark:{type:'bar',cornerRadiusTopLeft:3,cornerRadiusTopRight:3},
+           encoding:{
+             x:{field:'Item',type:'nominal',axis:{...axCfg(8),title:'Item'}},
+             y:{field:'Total',aggregate:'sum',type:'quantitative',axis:{...axCfg(8),title:'Sum ($)'}},
+             color:{field:'Item',type:'nominal',scale:{range:CI},legend:null},
+             tooltip:[{field:'Item'},{field:'Total',aggregate:'sum',title:'Revenue ($)',format:',.2f'}]
+           }
+          }
+        ]
+      },
+      /* Stacked bar */
+      {
+        title:{text:'⑤ Stacked Bar — Region × Item (click legend)',
+               color:'#a78bfa',fontSize:11,fontWeight:'bold',anchor:'start'},
+        width:270,height:270,data:{values:D},
+        params:[{name:'selm',select:{type:'point',fields:['Item']},bind:'legend'}],
+        mark:{type:'bar',cornerRadiusTopLeft:3,cornerRadiusTopRight:3},
+        encoding:{
+          x:{field:'Region',type:'nominal',axis:{...axCfg(9),title:'Region'}},
+          y:{field:'Total',aggregate:'sum',type:'quantitative',axis:{...axCfg(9),title:'Revenue ($)'}},
+          color:{field:'Item',type:'nominal',scale:{range:CI},
+                 legend:{...lgCfg,title:'Item (click)',orient:'bottom',columns:3}},
+          opacity:{condition:{param:'selm',value:1},value:0.1},
+          tooltip:[{field:'Region'},{field:'Item'},{field:'Total',aggregate:'sum',title:'Revenue ($)',format:',.2f'}]
+        }
+      }
+    ]}
+
+  ], /* end vconcat */
+
+  spacing:26,
+  config:{
+    view:{stroke:null},background:BG,
+    axis:{domain:false,ticks:false},
+    legend:{padding:6}
+  }
+};
+
+/* ─── EMBED ALL ────────────────────────────────────────────────── */
+vegaEmbed('#vis1',  spec1, EO);
+vegaEmbed('#vis2',  spec2, EO);
+vegaEmbed('#vis3',  spec3, EO);
+vegaEmbed('#vis4',  spec4, EO);
+vegaEmbed('#vis5',  spec5, EO);
+vegaEmbed('#vis-mv',specMV,EO);
+</script>
+</body>
+</html>
